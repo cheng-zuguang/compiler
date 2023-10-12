@@ -1,0 +1,4 @@
+int age = 35;
+if (age >= 12 * 4) {
+    printf("Hello world!");
+}
