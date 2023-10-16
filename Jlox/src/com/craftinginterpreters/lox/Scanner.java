@@ -1,6 +1,7 @@
 package com.craftinginterpreters.lox;
 
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -19,6 +20,8 @@ public class Scanner {
     private int line = 1;
 
     private static final Map<String, TokenType> keywords;
+
+    private final List<String> blockExplanatoryStack = new ArrayList<>();
 
     static {
         keywords = new HashMap<>();
@@ -105,10 +108,39 @@ public class Scanner {
                 // 判断是否为注释
                 if (match('/')) {
                     while (peek() != '\n' && !isAtEnd()) advance();
+                } else if (match('*')) {
+                    // 判断是否为行注释
+                    blockExplanatoryStack.add("/*");
+
+                    while (!isAtEnd()) {
+                        if (peek() == '\n') line += 1;
+                        char block_c = advance();
+
+                        switch (block_c) {
+                            case '/':
+                                if (match('*')) {
+                                    blockExplanatoryStack.add("/*");
+                                }
+                                break;
+                            case '*':
+                                if (match('/')) {
+                                    blockExplanatoryStack.remove(blockExplanatoryStack.size() - 1);
+                                }
+                                break;
+                        }
+                    }
+
+                    if (blockExplanatoryStack.size() > 0) {
+                        System.out.println(blockExplanatoryStack);
+                        System.out.println("无效行注释");
+                        break;
+                    }
+
                 } else {
                     addToken(SLASH);
                 }
                 break;
+
             case ' ':
             case '\r':
             case '\t':
@@ -151,6 +183,11 @@ public class Scanner {
     private char peekNext() {
         if(current + 1 >= source.length()) return '\0';
         return source.charAt(current + 1);
+    }
+
+    private char getCharByIx(int ix) {
+        if(isAtEnd()) return '\0';
+        return source.charAt(ix);
     }
 
     private boolean isDigit(char c) {
