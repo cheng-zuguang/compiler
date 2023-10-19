@@ -36,15 +36,6 @@ public class AstPrinter implements Expr.Visitor<String> {
         return expr.accept(this);
     }
 
-    /*
-    expression     → equality ;
-    equality       → comparison ( ("!=" | "==") comparison )* ;
-    comparison     → term ( (">" | ">=" | "<" | "<=" ) term )* ;
-    term           → factor ( ( "-" | "+" ) factor )* ;
-    factor         → unary ( ( "/" | "*" ) unary )* ;
-    unary          → ( "-" | "!" ) unary | primary;
-    primary        → NUMBER | STRING | "true" | "false" | "nil" | "(" expression ")" ;
-    * */
     @Override
     public String visitBinaryExpr(Expr.Binary expr) {
         return parenthesize(expr.operator.lexeme, expr.left, expr.right);
@@ -65,6 +56,11 @@ public class AstPrinter implements Expr.Visitor<String> {
     public String visitUnaryExpr(Expr.Unary expr) {
         return parenthesize(expr.operator.lexeme, expr.right);
     }
+
+//    @Override
+//    public String visitConditionalExpr(Expr.Conditional expr) {
+//        return parenthesize("condition", expr.expression);
+//    }
 
     // 实现的效果： (* (- 123) (group 45.67))
     private String parenthesize(String name, Expr... exprs) {

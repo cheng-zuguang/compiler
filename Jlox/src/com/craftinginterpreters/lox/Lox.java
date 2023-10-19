@@ -24,6 +24,7 @@ public class Lox {
     // 直接从源文件执行脚本语言
     private static void runFile(String path) throws IOException {
         byte[] bytes = Files.readAllBytes(Paths.get((path)));
+        System.out.println(path);
 
         // 让已出现问题的代码不再执行
         if (hadError) System.exit(65);
@@ -50,15 +51,30 @@ public class Lox {
     private static void run(String source) {
         Scanner scanner = new Scanner(source);
         List<Token> tokens = scanner.scanTokens();
+        Parser parser = new Parser(tokens);
+        Expr expression = parser.parse();
 
-        for (Token token : tokens) {
-            System.out.println(token);
-        }
+        // 中止运行
+        if (hadError) return;
+
+        System.out.println(new AstPrinter().print(expression));
+
+//        for (Token token : tokens) {
+//            System.out.println(token);
+//        }
+    }
+
+    static void error(int line, String message) {
+        report(line, "", message);
     }
 
     // error handling
-    public static void error(int line, String message) {
-        report(line, "", message);
+    public static void error(Token token, String message) {
+        if (token.type == TokenType.EOF) {
+            report(token.line, " at end", message);
+        } else {
+            report(token.line, " at '" + token.lexeme + "'", message);
+        }
     }
     private static void report(int line, String where, String message) {
         System.err.println("[line " + line + "] Error" + where + ": " + message);
