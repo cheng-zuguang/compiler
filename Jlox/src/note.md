@@ -13,14 +13,18 @@
   - factor         → unary ( ( "/" | "*" ) unary )* ;
   - unary          → ( "-" | "!" ) unary | primary;
   - primary        → NUMBER | STRING | "true" | "false" | "nil" | "(" expression ")" ;
+  
 - [About Syntax Errors](http://www.craftinginterpreters.com/parsing-expressions.html#syntax-errors)
   - Detect and report the error
   - Avoid crashing or hanging
+  
 - **About Parser**:
   - Fast.
   - Report as many distinct errors as there are. Report all the problem not just ones.
   - Minimize cascaded errors. track the real problem's code, not ghost errors.
+  
 - **CHALLENGES**
+
   - C1
     - ```
       expression -> comma ;
@@ -114,6 +118,96 @@
                   throw error(peek(), "Except expression.");
               }
           ```
+
+
+  ##### chapter 7
+
+  - **CHALLENGES**
+
+    - c1
+
+      - ```java
+        // suport string comapre
+        public Object visitBinaryExpr(Expr.Binary expr) {
+            Object left = evaluate(expr.left);
+            Object right = evaluate(expr.right);
+            
+            switch (expr.operator.type) {
+                    ...
+                    case GREATER:
+                   		checkNumberOperand(expr.operator, left, right);
+                        if (left instanceof String && right instanceof String && (left != null)) {
+                        	return ((String) left).compareTo((String) right) > 0;
+                        }
+                       	return (double) left > (double) right;
+                    ...
+            }
+        }
+        
+        private void checkNumberOperand(Token operator, Object left, Object right) {
+                if ((left instanceof Double && right instanceof Double) || (left instanceof String && right instanceof String)) return;
+        
+                throw new RuntimeError(operator, "operand must be an number or string");
+        }
+        ```
+
+      - 
+
+    - c2
+
+      - ```java
+        // suport string or number concat
+        public Object visitBinaryExpr(Expr.Binary expr) {
+            Object left = evaluate(expr.left);
+            Object right = evaluate(expr.right);
+            
+            switch (expr.operator.type) {
+                    ...
+                    case PLUS:
+                   		if (left instanceof Double && right instanceof Double) {
+                            return (double) left + (double) right;
+                        }
+        
+                        if ((left instanceof String || left instanceof Double) && (right instanceof String || right instanceof Double)) {
+                            if (left instanceof Double) {
+                                return left.toString().substring(0, left.toString().length() - 2) + right;
+                            }
+        
+                            if (right instanceof Double) {
+                                return left + right.toString().substring(0, right.toString().length() - 2);
+                            }
+                        }
+        
+                        throw new RuntimeError(expr.operator, "operand must be two number or two string.");
+                    ...
+            }
+        }
+        
+        ```
+
+    - c3
+
+      - ```java
+        public Object visitBinaryExpr(Expr.Binary expr) {
+            Object left = evaluate(expr.left);
+            Object right = evaluate(expr.right);
+            
+            switch (expr.operator.type) {
+                    ...
+                    case SLASH:
+                   		checkNumberOperand(expr.operator, left, right);
+                        detectDivisorIsZero(expr.operator, right);
+                        return (double) left / (double) right;
+                    ...
+            }
+        }
+        
+        private void detectDivisorIsZero(Token operator, Object obj) {
+        	if ((double) obj == 0) {
+            	throw new RuntimeError(operator, "divisor could not be zero.");
+        	}
+        }
+        ```
 
       - 
 
