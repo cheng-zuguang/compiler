@@ -209,6 +209,145 @@
         }
         ```
 
-      - 
+##### chapter 8
+
+- [challenges](https://github.com/munificent/craftinginterpreters/blob/master/note/answers/chapter08_statements.md)
+
+##### chapter 9
+
+- c3
+
+  - ```java
+    statement      → exprStmt
+        		   | breakStmt
+                   | forStmt
+                   | ifStmt
+                   | printStmt
+                   | whileStmt
+                   | block ;
+    ```
+
+  - in GenerateAST.java
+
+    - ```java
+      // update defineAst in main
+      defineAst(outputDir, "Stmt", Arrays.asList(
+                      "Block      : List<Stmt> statements",
+         				"Break		:",
+                      "Expression : Expr expression",
+                      "If         : Expr condition,Stmt thenBranch,Stmt elseBranch",
+                      "Print      : Expr expression",
+                      "Var        : Token name,Expr initialize",
+                      "While      : Expr condition,Stmt body"
+              ));
+      
+      // update defineType func
+      private static void defineType(PrintWriter writer, String baseName, String className, String fieldsList) {
+          // ...
+          // replace 'String[] fields = fieldList.split(", ");'
+          String[] fields;
+          if (fieldList.isEmpty()) {
+            fields = new String[0];
+          } else {
+            fields = fieldList.split(", ");
+          }
+      	// ...    
+      }
+      ```
+
+  - In TokenType.java
+
+    - ```java
+      // insert type: BREAK
+      public enum TokenType {
+      	// ...
+          // KEYWORDS
+          AND, BREAK, CLASS, ELSE, FALSE, FUN, FOR, IF, NIL, OR, PRINT, RETURN, SUPER, THIS, VAR, WHILE,TRUE,
+      	// ...    
+      }
+      ```
+
+  - In Scanner.java
+
+    - ```java
+      public class Scanner{
+          // ...
+          static {
+              keywords = new HashMap<>();
+              // ...
+              keywords.put("break", BREAK);
+          }
+      }
+      ```
+
+  - In Paser.java
+
+    - ```java
+      public class Parser {
+          // 记录当前循环的嵌套深度
+          private int loopDepth = 0; 
+          
+          statement() {
+              // ...
+              if (match(BREAK)) return breakStatement();
+              
+              // ...
+          }
+          private Stmt breakStatement() {
+              if (loopDepth == 0) {
+                  error(previous(), "Must be inside a loop to use 'break'.");
+              }
+              
+              consume(SEMICOLON, "except ';' after break.");
+              return new Stmt.Break();
+          }
+          
+          private Stmt forStatement() {
+              try {
+              	loopDepth++;
+                  // ...
+              } finally {
+                  loopDepth--;
+              }
+          }
+          
+          private Stmt whileStatement() {
+              try {
+              	loopDepth++;
+                  // ...
+              } finally {
+                  loopDepth--;
+              }
+          }
+      }
+      ```
+
+  - In interpreter.java
+
+    - ```java
+      public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
+      	// add BreakException
+          private static class BreakException extends RuntimeException {}
+          // ...
+          public Void visitBreakStmt(Stmt.Break stmt){
+              throw new BreakException();
+          }
+          
+          // update visitWhileStmt()
+          public Void visitWhileStmt(Stmt.While stmt) {
+              try {
+                  while (isTruthy(evaluate(stmt.condition))) {
+                  	execute(stmt.body);
+              	}
+              } catch(BreakException e) {
+                  System.out.println("break error");
+              }
+              
+              return null;
+          }
+      }
+      ```
+
+    - 
 
 

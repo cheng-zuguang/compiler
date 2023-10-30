@@ -1,11 +1,36 @@
 package com.craftinginterpreters.lox;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 import static com.craftinginterpreters.lox.TokenType.*;
 /*
     优先级从低到高
-    expression     → equality ;
+    program        → statement* EOF ;
+    declaration    → varDecl
+                     | statement ;
+    statement      → exprStmt
+                     | forStmt
+                     | ifStmt
+                     | printStmt
+                     | whileStmt
+                     | block ;
+    forStmt        → "for" "("
+                        ( varDecl | exprStmt | ";" ) expression? ";" expression?
+                     ")" statement ;
+    whileStmt      → "while" "(" expression ")" statement ;
+    ifStmt         → "if" "(" expression ")" statement
+                     ( "else" statement )? ;
+    block          → "{" declaration* "}" ;
+    exprStmt       → expression ";" ;
+    printStmt      → "print" expression ";" ;
+    varDecl        → "var" IDENTIFIER ("=" expression ) ? ";" ;
+    expression     → assignment ;
+    assignment     → IDENTIFIER "=" assignment | equality | logic_or ;
+    logic_or       → login_and ( "or" login_and )* ;
+    login_and      → equality ( "and" equality )* ;
     equality       → comparison ( ("!=" | "==") comparison )* ;
     comparison     → term ( (">" | ">=" | "<" | "<=" ) term )* ;
     term           → factor ( ( "-" | "+" ) factor )* ;
@@ -13,6 +38,7 @@ import static com.craftinginterpreters.lox.TokenType.*;
     unary          → ( "-" | "!" ) unary | primary;
     primary        → NUMBER | STRING | "true" | "false" | "nil"
                    | "(" expression ")"
+                   | IDENTIFIER
                    // error productions
                    | ("!=" | "==") equality
                    | (">" || ">=" || "<" || "<=") comparsion
@@ -30,13 +56,23 @@ import static com.craftinginterpreters.lox.TokenType.*;
     3. Minimize cascaded errors. track the real problem's code, not ghost errors.
     * */
 public class Parser {
-    Expr parse() {
-        try {
-            return expression();
-        } catch (ParseError error) {
-            return null;
+//    Expr parse() {
+//        try {
+//            return expression();
+//        } catch (ParseError error) {
+//            return null;
+//        }
+//    }
+
+    List<Stmt> parse() {
+        List<Stmt> statements = new ArrayList<>();
+        while (!isAtEnd()) {
+            statements.add(declaration());
         }
+
+        return statements;
     }
+
     private static class ParseError extends RuntimeException {}
 
     private final List<Token> tokens;
@@ -46,9 +82,189 @@ public class Parser {
         this.tokens = tokens;
     }
 
-    // expression     → equality ;
+    // declaration    → varDecl | statement ;
+    private Stmt declaration() {
+        try {
+            if (match(VAR)) {
+                return varDeclaration();
+            }
+            return statement();
+        } catch (ParseError error) {
+            synchronize();
+            return null;
+        }
+    }
+
+    // statement      → exprStmt | forStmt | ifStmt | printStmt | whileStmt | block ;
+
+    private Stmt statement() {
+        if (match(FOR)) return forStatement();
+        if (match(IF)) return ifStatement();
+        if (match(PRINT)) return printStatement();
+        if (match(WHILE)) return whileStatement();
+        if (match(LEFT_BRACE)) return new Stmt.Block(block());
+
+        return expressionStatement();
+    }
+
+    // forStmt        → "for" "("
+    //                        ( varDecl | exprStmt | ";" ) expression? ";" expression?
+    //                     ")" statement ;
+    private Stmt forStatement() {
+        consume(LEFT_PAREN, "expected '(' after for.");
+        Stmt initializer;
+        if (match(SEMICOLON)) {
+            initializer = null;
+        } else if (match(VAR)) {
+            initializer = varDeclaration();
+        } else  {
+            initializer = expressionStatement();
+        }
+
+        Expr condition = null;
+        if (!check(SEMICOLON)) {
+            condition = expression();
+        }
+        consume(SEMICOLON, "Expect ';' after loop condition");
+
+        Expr increment = null;
+        if (!check(RIGHT_PAREN)) {
+            increment = expression();
+        }
+        consume(RIGHT_PAREN, "Expect ')' after the class");
+
+        Stmt body = statement();
+
+        // Desugaring piece: for loop -> while loop
+        if (increment != null) {
+            body = new Stmt.Block(Arrays.asList(
+                    body,
+                    new Stmt.Expression(increment)
+            ));
+        }
+
+        if (condition == null) condition = new Expr.Literal(true);
+        body = new Stmt.While(condition, body);
+
+        if (initializer != null) {
+            body = new Stmt.Block(Arrays.asList(initializer, body));
+        }
+
+        return body;
+    }
+
+    // if     -> "if" "(" expression ")" statement ( "else" statement )? ;
+    private Stmt ifStatement() {
+        consume(LEFT_PAREN, "Expect 'after' 'if'.");
+        Expr condition = expression();
+        consume(RIGHT_PAREN, "Expect ')' after if conditions");
+
+        Stmt thenBranch = statement();
+        Stmt elseBranch = null;
+
+        if (match(ELSE)) {
+            elseBranch = statement();
+        }
+
+        return new Stmt.If(condition, thenBranch, elseBranch);
+    }
+
+    // printStmt      → "print" expression ";" ;
+    private Stmt printStatement() {
+        Expr expr = expression();
+        consume(SEMICOLON, "Expected ':' after value");
+        return new Stmt.Print(expr);
+    }
+
+    // exprStmt       → expression ";" ;
+    private Stmt expressionStatement() {
+        Expr expr = expression();
+        consume(SEMICOLON, "Expected ':' after expression");
+        return new Stmt.Expression(expr);
+    }
+
+    // block          → "{" declaration* "}" ;
+    private List<Stmt> block() {
+        List<Stmt> statements = new ArrayList<>();
+        while (!check(RIGHT_BRACE) && !isAtEnd()) {
+            statements.add(declaration());
+        }
+
+        consume(RIGHT_BRACE, "Excepted '}' after block");
+        return statements;
+    }
+
+    // varDecl        → "var" IDENTIFIER ("=" expression ) ? ";" ;
+    private Stmt varDeclaration() {
+        Token name = consume(IDENTIFIER, "Excepted variable name");
+
+        Expr initializer = null;
+        if (match(EQUAL)) {
+            initializer = expression();
+        }
+
+        consume(SEMICOLON, "Expected ';' after variable declaration");
+        return new Stmt.Expression(initializer);
+    }
+
+    // whileStmt      → "while" "(" expression ")" statement ;
+    private Stmt whileStatement() {
+        consume(LEFT_PAREN, "Expect '(' after while.");
+        Expr condition = expression();
+
+        consume(RIGHT_PAREN, "Expect ')' after condition");
+        Stmt body = statement();
+
+        return new Stmt.While(condition, body);
+    }
+
+    // expression     → assignment ;
+    // assignment     → IDENTIFIER "=" assignment | equality | logic_or ;
     private Expr expression() {
-        return equality();
+        return assignment();
+    }
+
+    private Expr assignment() {
+//        Expr expr = equality();
+        Expr expr = or();
+
+        if (match(EQUAL)) {
+            Token equals = previous();
+            Expr value = assignment();
+
+            if (expr instanceof Expr.Variable) {
+                Token name = ((Expr.Variable) expr).name;
+                return new Expr.Assign(name, value);
+            }
+
+            error(equals, "Invalid assignment target.");
+        }
+
+        return expr;
+    }
+    // logic_or       → login_and ( "or" login_and )* ;
+    private Expr or() {
+        Expr expr = and();
+
+        while (match(OR)) {
+            Token operator = previous();
+            Expr right = and();
+            expr = new Expr.Logical(expr, operator, right);
+        }
+
+        return expr;
+    }
+    // login_and      → equality ( "and" equality )* ;
+    private Expr and() {
+        Expr expr = equality();
+
+        while (match(AND)) {
+            Token operator = previous();
+            Expr right = equality();
+            expr = new Expr.Logical(expr, operator, right);
+        }
+
+        return expr;
     }
 
     /**
@@ -153,7 +369,7 @@ public class Parser {
         return primary();
     }
 
-    // primary        → NUMBER | STRING | "true" | "false" | "nil" | "(" expression ")" ;
+    // primary        → NUMBER | STRING | "true" | "false" | "nil" | "(" expression ")" | IDENTIFIER ;
     private Expr primary() {
         if (match(FALSE)) return new Expr.Literal(false);
         if (match(TRUE)) return new Expr.Literal(true);
@@ -161,6 +377,10 @@ public class Parser {
 
         if (match(NUMBER, STRING)) {
             return new Expr.Literal(previous().literal);
+        }
+
+        if (match(IDENTIFIER)) {
+            return new Expr.Variable(previous());
         }
 
         if (match(LEFT_PAREN)) {
