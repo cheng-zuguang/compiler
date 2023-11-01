@@ -1,14 +1,7 @@
-class Animal {
-    init(name) {
-        this.name = name;
-    }
+fun scope(a) {
+  var a = "local";
+
+  print a;
 }
 
-class Dog < Animal {
-    watchdog() {
-        print this.name + "watchDog";
-    }
-}
-
-var dog = new Dog("as you can see, i'm a ");
-dog.watchdog();
+scope("param");

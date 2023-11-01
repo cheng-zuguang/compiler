@@ -9,12 +9,14 @@ import static com.craftinginterpreters.lox.TokenType.*;
 /*
     优先级从低到高
     program        → statement* EOF ;
-    declaration    → varDecl
+    declaration    → funDecl
+                     | varDecl
                      | statement ;
     statement      → exprStmt
                      | forStmt
                      | ifStmt
                      | printStmt
+                     | returnStmt
                      | whileStmt
                      | block ;
     forStmt        → "for" "("
@@ -26,6 +28,10 @@ import static com.craftinginterpreters.lox.TokenType.*;
     block          → "{" declaration* "}" ;
     exprStmt       → expression ";" ;
     printStmt      → "print" expression ";" ;
+    returnStmt     → "return" expression? ";" ;
+    funDecl        → "fun" function;
+    function       → IDENTIFIER "(" parameters? ")" block;
+    parameters     → IDENTIFIER ( ","  IDENTIFIER )* ;
     varDecl        → "var" IDENTIFIER ("=" expression ) ? ";" ;
     expression     → assignment ;
     assignment     → IDENTIFIER "=" assignment | equality | logic_or ;
@@ -35,7 +41,9 @@ import static com.craftinginterpreters.lox.TokenType.*;
     comparison     → term ( (">" | ">=" | "<" | "<=" ) term )* ;
     term           → factor ( ( "-" | "+" ) factor )* ;
     factor         → unary ( ( "/" | "*" ) unary )* ;
-    unary          → ( "-" | "!" ) unary | primary;
+    unary          → ( "-" | "!" ) unary | call;
+    call           → primary ( "(" arguments? ")" )* ;
+    arguments      → expression ("," expression)* ;
     primary        → NUMBER | STRING | "true" | "false" | "nil"
                    | "(" expression ")"
                    | IDENTIFIER
@@ -82,9 +90,14 @@ public class Parser {
         this.tokens = tokens;
     }
 
-    // declaration    → varDecl | statement ;
+    // declaration    → funDecl | varDecl | statement ;
     private Stmt declaration() {
         try {
+            // funDecl        → "fun" function;
+            if (match(FUN)) {
+                return function("function");
+            }
+
             if (match(VAR)) {
                 return varDeclaration();
             }
@@ -101,6 +114,7 @@ public class Parser {
         if (match(FOR)) return forStatement();
         if (match(IF)) return ifStatement();
         if (match(PRINT)) return printStatement();
+        if (match(RETURN)) return returnStatement();
         if (match(WHILE)) return whileStatement();
         if (match(LEFT_BRACE)) return new Stmt.Block(block());
 
@@ -172,15 +186,49 @@ public class Parser {
     // printStmt      → "print" expression ";" ;
     private Stmt printStatement() {
         Expr expr = expression();
-        consume(SEMICOLON, "Expected ':' after value");
+        consume(SEMICOLON, "Expected ';' after value");
         return new Stmt.Print(expr);
+    }
+
+    // returnStmt     → "return" expression? ";" ;
+    private Stmt returnStatement() {
+        Token keyword = previous();
+        Expr value = null;
+        if (!check(SEMICOLON)) {
+            value = expression();
+        }
+        consume(SEMICOLON, "Expected ';' after return value.");
+        return  new Stmt.Return(keyword, value);
     }
 
     // exprStmt       → expression ";" ;
     private Stmt expressionStatement() {
         Expr expr = expression();
-        consume(SEMICOLON, "Expected ':' after expression");
+        consume(SEMICOLON, "Expected ';' after expression");
         return new Stmt.Expression(expr);
+    }
+
+    // function       → IDENTIFIER "(" parameters? ")" block;
+    private Stmt.Function function(String kind) {
+        Token name = consume(IDENTIFIER, "Excepted " + kind + " name.");
+
+        consume(LEFT_PAREN, "Excepted '(' after " + kind + " name.");
+        // parameters     → IDENTIFIER ( ","  IDENTIFIER )* ;
+        List<Token> parameters = new ArrayList<>();
+        if (!check(RIGHT_PAREN)) {
+            do {
+                if (parameters.size() >= 8) {
+                    error(peek(), "Can't have more than 8 parameters.");
+                }
+
+                parameters.add(consume(IDENTIFIER, "Expect parameter name."));
+            } while (match(COMMA));
+        }
+        consume(RIGHT_PAREN, "Expect ')' after parameters.");
+
+        consume(LEFT_BRACE, "Expected '{' before " + kind + " body.");
+        List<Stmt> body = block();
+        return new Stmt.Function(name, parameters, body);
     }
 
     // block          → "{" declaration* "}" ;
@@ -196,15 +244,15 @@ public class Parser {
 
     // varDecl        → "var" IDENTIFIER ("=" expression ) ? ";" ;
     private Stmt varDeclaration() {
-        Token name = consume(IDENTIFIER, "Excepted variable name");
+        Token name = consume(IDENTIFIER, "Expect variable name.");
 
         Expr initializer = null;
         if (match(EQUAL)) {
             initializer = expression();
         }
 
-        consume(SEMICOLON, "Expected ';' after variable declaration");
-        return new Stmt.Expression(initializer);
+        consume(SEMICOLON, "Expect ';' after variable declaration.");
+        return new Stmt.Var(name, initializer);
     }
 
     // whileStmt      → "while" "(" expression ")" statement ;
@@ -366,7 +414,37 @@ public class Parser {
             return new Expr.Unary(operator, right);
         }
 
-        return primary();
+        return call();
+    }
+
+    private Expr finishCall(Expr callee) {
+        List<Expr> arguments = new ArrayList<>();
+        if (!check(RIGHT_PAREN)) {
+            do {
+                if (arguments.size() > 255) {
+                    error(peek(), "Cant not have more than 255 arguments.");
+                }
+                arguments.add(expression());
+            } while (match(COMMA));
+        }
+        Token paren = consume(RIGHT_PAREN, "expected ')' after arguments.");
+
+        return new Expr.Call(callee, paren, arguments);
+    }
+
+    // call  -> primary ( "(" arguments? ")" )* ;
+    private Expr call() {
+        Expr expr = primary();
+
+        while (true) {
+            if (match(LEFT_PAREN)) {
+                expr = finishCall(expr);
+            } else {
+                break;
+            }
+        }
+
+        return expr;
     }
 
     // primary        → NUMBER | STRING | "true" | "false" | "nil" | "(" expression ")" | IDENTIFIER ;
