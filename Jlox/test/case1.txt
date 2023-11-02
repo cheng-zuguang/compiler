@@ -1,7 +1,15 @@
-fun scope(a) {
-  var a = "local";
+var a = "global";
+{
+  fun showA() {
+    print a;
+  }
 
-  print a;
+  showA();
+  var a = "block";
+  showA();
 }
 
-scope("param");
+var b = "outer";
+{
+  var b = a;
+}

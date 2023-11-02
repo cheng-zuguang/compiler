@@ -3,6 +3,7 @@ package com.craftinginterpreters.lox;
 import java.util.List;
 
 abstract class Expr {
+    abstract <R> R accept(Visitor<R> visitor);
     interface Visitor<R> {
         R visitAssignExpr(Assign expr);
         R visitBinaryExpr(Binary expr);
@@ -25,7 +26,7 @@ abstract class Expr {
         }
 
         final Token name;
-        final  Expr value;
+        final Expr value;
     }
     static class Binary extends Expr {
         Binary(Expr left, Token operator, Expr right) {
@@ -40,8 +41,8 @@ abstract class Expr {
         }
 
         final Expr left;
-        final  Token operator;
-        final  Expr right;
+        final Token operator;
+        final Expr right;
     }
     static class Call extends Expr {
         Call(Expr callee, Token paren, List<Expr> arguments) {
@@ -56,8 +57,8 @@ abstract class Expr {
         }
 
         final Expr callee;
-        final  Token paren;
-        final  List<Expr> arguments;
+        final Token paren;
+        final List<Expr> arguments;
     }
     static class Grouping extends Expr {
         Grouping(Expr expression) {
@@ -96,8 +97,8 @@ abstract class Expr {
         }
 
         final Expr left;
-        final  Token operator;
-        final  Expr right;
+        final Token operator;
+        final Expr right;
     }
     static class Unary extends Expr {
         Unary(Token operator, Expr right) {
@@ -111,7 +112,7 @@ abstract class Expr {
         }
 
         final Token operator;
-        final  Expr right;
+        final Expr right;
     }
     static class Variable extends Expr {
         Variable(Token name) {
@@ -126,5 +127,4 @@ abstract class Expr {
         final Token name;
     }
 
-    abstract <R> R accept(Visitor<R> visitor);
 }

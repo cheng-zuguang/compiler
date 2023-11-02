@@ -3,6 +3,7 @@ package com.craftinginterpreters.lox;
 import java.util.List;
 
 abstract class Stmt {
+    abstract <R> R accept(Visitor<R> visitor);
     interface Visitor<R> {
         R visitBlockStmt(Block stmt);
         R visitExpressionStmt(Expression stmt);
@@ -50,8 +51,8 @@ abstract class Stmt {
         }
 
         final Token name;
-        final  List<Token> params;
-        final  List<Stmt> body;
+        final List<Token> params;
+        final List<Stmt> body;
     }
     static class If extends Stmt {
         If(Expr condition, Stmt thenBranch, Stmt elseBranch) {
@@ -66,8 +67,8 @@ abstract class Stmt {
         }
 
         final Expr condition;
-        final  Stmt thenBranch;
-        final  Stmt elseBranch;
+        final Stmt thenBranch;
+        final Stmt elseBranch;
     }
     static class Print extends Stmt {
         Print(Expr expression) {
@@ -93,7 +94,7 @@ abstract class Stmt {
         }
 
         final Token keyword;
-        final  Expr value;
+        final Expr value;
     }
     static class Var extends Stmt {
         Var(Token name, Expr initialize) {
@@ -107,7 +108,7 @@ abstract class Stmt {
         }
 
         final Token name;
-        final  Expr initialize;
+        final Expr initialize;
     }
     static class While extends Stmt {
         While(Expr condition, Stmt body) {
@@ -121,8 +122,7 @@ abstract class Stmt {
         }
 
         final Expr condition;
-        final  Stmt body;
+        final Stmt body;
     }
 
-    abstract <R> R accept(Visitor<R> visitor);
 }

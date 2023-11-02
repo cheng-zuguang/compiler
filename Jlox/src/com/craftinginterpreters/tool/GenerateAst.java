@@ -51,6 +51,8 @@ public class GenerateAst {
         writer.println();
         writer.println("abstract class " + baseName + " {");
 
+        writer.println("    abstract <R> R accept(Visitor<R> visitor);");
+
         defineVisitor(writer, baseName, types);
 
         // AST classes
@@ -62,7 +64,6 @@ public class GenerateAst {
         }
 
         writer.println();
-        writer.println("    abstract <R> R accept(Visitor<R> visitor);");
 
         writer.println("}");
         writer.close();
@@ -93,7 +94,7 @@ public class GenerateAst {
         // fields
         writer.println();
         for(String field : fields) {
-            writer.println("        final " + field + ";");
+            writer.println("        final " + field.trim() + ";");
         }
 
         writer.println("    }");
