@@ -10,3 +10,6 @@
       ```
 - then `node 05_SimpleScript.js`
 
+### In Jlox dir
+- implement Lox Script language by java
+- need config java env
