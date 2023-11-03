@@ -3,15 +3,18 @@ package com.craftinginterpreters.lox;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 
 import static com.craftinginterpreters.lox.TokenType.*;
 /*
     优先级从低到高
     program        → statement* EOF ;
-    declaration    → funDecl
+    declaration    → classDecl
+                     | funDecl
                      | varDecl
                      | statement ;
+    classDecl      → "class" IDENTIFIER "{" function* "}" ;
+    funDecl        → "fun" function;
+    varDecl        → "var" IDENTIFIER ("=" expression ) ? ";" ;
     statement      → exprStmt
                      | forStmt
                      | ifStmt
@@ -29,12 +32,11 @@ import static com.craftinginterpreters.lox.TokenType.*;
     exprStmt       → expression ";" ;
     printStmt      → "print" expression ";" ;
     returnStmt     → "return" expression? ";" ;
-    funDecl        → "fun" function;
     function       → IDENTIFIER "(" parameters? ")" block;
     parameters     → IDENTIFIER ( ","  IDENTIFIER )* ;
-    varDecl        → "var" IDENTIFIER ("=" expression ) ? ";" ;
     expression     → assignment ;
-    assignment     → IDENTIFIER "=" assignment | equality | logic_or ;
+    assignment     → ( call "." )? IDENTIFIER "=" assignment
+                    | logic_or ;
     logic_or       → login_and ( "or" login_and )* ;
     login_and      → equality ( "and" equality )* ;
     equality       → comparison ( ("!=" | "==") comparison )* ;
@@ -42,14 +44,14 @@ import static com.craftinginterpreters.lox.TokenType.*;
     term           → factor ( ( "-" | "+" ) factor )* ;
     factor         → unary ( ( "/" | "*" ) unary )* ;
     unary          → ( "-" | "!" ) unary | call;
-    call           → primary ( "(" arguments? ")" )* ;
+    call           → primary ( "(" arguments? ")" | "." IDENTIFIER )* ;
     arguments      → expression ("," expression)* ;
     primary        → NUMBER | STRING | "true" | "false" | "nil"
                    | "(" expression ")"
                    | IDENTIFIER
                    // error productions
                    | ("!=" | "==") equality
-                   | (">" || ">=" || "<" || "<=") comparsion
+                   | (">" || ">=" || "<" || "<=") comparison
                    | ("+") term
                    | ("/" | "*") factor ;
 
@@ -93,6 +95,8 @@ public class Parser {
     // declaration    → funDecl | varDecl | statement ;
     private Stmt declaration() {
         try {
+            if (match(CLASS)) return classDeclaration();
+
             // funDecl        → "fun" function;
             if (match(FUN)) {
                 return function("function");
@@ -108,8 +112,20 @@ public class Parser {
         }
     }
 
-    // statement      → exprStmt | forStmt | ifStmt | printStmt | whileStmt | block ;
+    private Stmt classDeclaration() {
+        Token name = consume(IDENTIFIER, "Excepted class name.");
+        consume(LEFT_BRACE, "Excepted '{' after class name.");
 
+        List<Stmt.Function> methods = new ArrayList<>();
+        while (!check(RIGHT_BRACE) && !isAtEnd()) {
+            methods.add(function("method"));
+        }
+
+        consume(RIGHT_BRACE, "Excepted '}' after class body.");
+        return new Stmt.Class(name, methods);
+    }
+
+    // statement      → exprStmt | forStmt | ifStmt | printStmt | whileStmt | block ;
     private Stmt statement() {
         if (match(FOR)) return forStatement();
         if (match(IF)) return ifStatement();
@@ -267,11 +283,12 @@ public class Parser {
     }
 
     // expression     → assignment ;
-    // assignment     → IDENTIFIER "=" assignment | equality | logic_or ;
     private Expr expression() {
         return assignment();
     }
 
+    // assignment     → ( call "." )? IDENTIFIER "=" assignment
+    //                | logic_or ;
     private Expr assignment() {
 //        Expr expr = equality();
         Expr expr = or();
@@ -283,6 +300,9 @@ public class Parser {
             if (expr instanceof Expr.Variable) {
                 Token name = ((Expr.Variable) expr).name;
                 return new Expr.Assign(name, value);
+            } else if (expr instanceof Expr.Get) {
+                Expr.Get get = (Expr.Get) expr;
+                return new Expr.Set(get.object, get.name, value);
             }
 
             error(equals, "Invalid assignment target.");
@@ -439,6 +459,9 @@ public class Parser {
         while (true) {
             if (match(LEFT_PAREN)) {
                 expr = finishCall(expr);
+            } else if (match(DOT)) {
+                Token name = consume(IDENTIFIER, "Excepted identifier after '.' .");
+                expr = new Expr.Get(expr, name);
             } else {
                 break;
             }

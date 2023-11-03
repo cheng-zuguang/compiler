@@ -13,3 +13,10 @@ var b = "outer";
 {
   var b = a;
 }
+
+class Test {
+    haveFun() {
+    }
+}
+
+print Test;
