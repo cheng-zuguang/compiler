@@ -1,41 +1,27 @@
 package com.craftinginterpreters.lox;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.ArrayList;
 import java.util.Map;
 
-public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
-//    private  Environment environment = new Environment(null);
-    // tracks the current environment.
-    final Environment globals = new Environment();
-    // tracks the outermost environment.
-    private Environment environment = globals;
-    // current environment to the enclosing environment that we can find variable.
+class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
+    final Map<String, Object> globals = new HashMap<>();
+    private Environment environment;
     private final Map<Expr, Integer> locals = new HashMap<>();
-
-//    void interpret(Expr expr) {
-//        try {
-//            Object value = evaluate(expr);
-//            System.out.println(stringify(value));
-//        } catch (RuntimeError error) {
-//            Lox.runtimeError(error);
-//        }
-//    }
+    private final Map<Expr, Integer> slots = new HashMap<>();
 
     Interpreter() {
-        globals.define("clock", new LoxCallable() {
+        globals.put("clock", new LoxCallable() {
             @Override
-            public int arity() { return 0; }
-            // return current time
-            @Override
-            public Object call(Interpreter interpreter, List<Object> arguments) {
-                return (double) System.currentTimeMillis() / 1000.0;
+            public int arity() {
+                return 0;
             }
 
             @Override
-            public String toString() {
-                return "<native fn>";
+            public Object call(Interpreter interpreter,
+                               List<Object> arguments) {
+                return (double) System.currentTimeMillis() / 1000.0;
             }
         });
     }
@@ -45,105 +31,9 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
             for (Stmt statement : statements) {
                 execute(statement);
             }
-        }catch (RuntimeError error) {
+        } catch (RuntimeError error) {
             Lox.runtimeError(error);
         }
-    }
-
-    private String stringify(Object object) {
-        if (object == null) return "nil";
-
-        if (object instanceof Double) {
-            String text = object.toString();
-            if (text.endsWith(".0")) {
-                text = text.substring(0, text.length() - 2);
-            }
-            return text;
-        }
-
-        return object.toString();
-    }
-
-    @Override
-    public Object visitLiteralExpr(Expr.Literal expr) {
-        return expr.value;
-    }
-
-    @Override
-    public Object visitLogicalExpr(Expr.Logical expr) {
-        Object left = evaluate(expr.left);
-
-        if (expr.operator.type == TokenType.OR) {
-            if (isTruthy(left)) return left;
-        } else  {
-            if (!isTruthy(left)) return left;
-        }
-
-        return evaluate(expr.right);
-    }
-
-    @Override
-    public Object visitUnaryExpr(Expr.Unary expr) {
-        Object right = evaluate(expr.right);
-
-        switch (expr.operator.type) {
-            case BANG -> {
-                return !isTruthy(right);
-            }
-            case MINUS -> {
-                checkNumberOperand(expr.operator, right);
-                return -(double) right;
-            }
-        }
-
-        return null;
-    }
-
-    @Override
-    public Object visitVariableExpr(Expr.Variable expr) {
-//        return environment.get(expr.name);
-        return lookUpVariable(expr.name, expr);
-    }
-
-    private Object lookUpVariable(Token name, Expr expr) {
-        Integer distance = locals.get(expr);
-        if (distance != null) {
-            return environment.getAt(distance, name.lexeme);
-        } else {
-            return environment.get(name);
-        }
-    }
-
-
-    /**
-     * nil or false is falsey, else is  truthy
-     * */
-    public boolean isTruthy(Object obj) {
-        if (obj == null) return false;
-        if (obj instanceof Boolean) return (boolean) obj;
-        return true;
-    }
-
-    private void checkNumberOperand(Token operator, Object operand) {
-        if (operand instanceof Double) return;
-        throw new RuntimeError(operator, "operand must be an number");
-    }
-
-    private void checkNumberOperand(Token operator, Object left, Object right) {
-        if (left instanceof Double && right instanceof Double) return;
-
-        throw new RuntimeError(operator, "operand must be an number or string");
-    }
-
-    private void detectDivisorIsZero(Token operator, Object obj) {
-        if ((double) obj == 0) {
-            throw new RuntimeError(operator, "divisor could not be zero.");
-        }
-    }
-
-    @Override
-    public Object visitGroupingExpr(Expr.Grouping expr) {
-        return evaluate(expr.expression);
     }
 
     private Object evaluate(Expr expr) {
@@ -154,14 +44,16 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
         stmt.accept(this);
     }
 
-    public void resolve(Expr expr, int depth) {
+    void resolve(Expr expr, int depth, int slot) {
         locals.put(expr, depth);
+        slots.put(expr, slot);
     }
 
-    public void executeBlock(List<Stmt> statements, Environment environment) {
+    void executeBlock(List<Stmt> statements, Environment environment) {
         Environment previous = this.environment;
         try {
             this.environment = environment;
+
             for (Stmt statement : statements) {
                 execute(statement);
             }
@@ -179,34 +71,22 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
     @Override
     public Void visitExpressionStmt(Stmt.Expression stmt) {
         evaluate(stmt.expression);
-        return null;
+        return null; // [void]
     }
 
     @Override
     public Void visitFunctionStmt(Stmt.Function stmt) {
         LoxFunction function = new LoxFunction(stmt, environment);
-
-        environment.define(stmt.name.lexeme, function);
+        define(stmt.name, function);
         return null;
     }
 
-    /**
-     * else归属问题：就近原则
-     * */
     @Override
     public Void visitIfStmt(Stmt.If stmt) {
         if (isTruthy(evaluate(stmt.condition))) {
             execute(stmt.thenBranch);
         } else if (stmt.elseBranch != null) {
             execute(stmt.elseBranch);
-        }
-        return null;
-    }
-
-    @Override
-    public Void visitWhileStmt(Stmt.While stmt) {
-        while (isTruthy(evaluate(stmt.condition))) {
-            execute(stmt.body);
         }
         return null;
     }
@@ -233,83 +113,82 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
             value = evaluate(stmt.initialize);
         }
 
-        environment.define(stmt.name.lexeme, value);
-
+        define(stmt.name, value);
         return null;
     }
 
     @Override
-    public Void visitAssignExpr(Expr.Assign expr) {
+    public Void visitWhileStmt(Stmt.While stmt) {
+        while (isTruthy(evaluate(stmt.condition))) {
+            execute(stmt.body);
+        }
+        return null;
+    }
+
+    @Override
+    public Object visitAssignExpr(Expr.Assign expr) {
         Object value = evaluate(expr.value);
-//        environment.assign(expr.name, value);
+
         Integer distance = locals.get(expr);
         if (distance != null) {
-            environment.assignAt(distance, expr.name, value);
+            environment.assignAt(distance, slots.get(expr), value);
         } else {
-            environment.assign(expr.name, value);
+            if (globals.containsKey(expr.name.lexeme)) {
+                globals.put(expr.name.lexeme, value);
+            } else {
+                throw new RuntimeError(expr.name,
+                        "Undefined variable '" + expr.name.lexeme + "'.");
+            }
         }
 
-        return null;
+        return value;
     }
 
     @Override
     public Object visitBinaryExpr(Expr.Binary expr) {
         Object left = evaluate(expr.left);
-        Object right = evaluate(expr.right);
+        Object right = evaluate(expr.right); // [left]
 
         switch (expr.operator.type) {
-            case BANG_EQUAL -> {
+            case BANG_EQUAL:
                 return !isEqual(left, right);
-            }
-            case EQUAL_EQUAL -> {
+            case EQUAL_EQUAL:
                 return isEqual(left, right);
-            }
-            case GREATER -> {
-                checkNumberOperand(expr.operator, left, right);
+            case GREATER:
+                checkNumberOperands(expr.operator, left, right);
                 return (double) left > (double) right;
-            }
-            case GREATER_EQUAL -> {
-                checkNumberOperand(expr.operator, left, right);
+            case GREATER_EQUAL:
+                checkNumberOperands(expr.operator, left, right);
                 return (double) left >= (double) right;
-            }
-            case LESS -> {
-                checkNumberOperand(expr.operator, left, right);
+            case LESS:
+                checkNumberOperands(expr.operator, left, right);
                 return (double) left < (double) right;
-            }
-            case LESS_EQUAL -> {
-                checkNumberOperand(expr.operator, left, right);
+            case LESS_EQUAL:
+                checkNumberOperands(expr.operator, left, right);
                 return (double) left <= (double) right;
-            }
-            case MINUS -> {
-                checkNumberOperand(expr.operator, left, right);
+            case MINUS:
+                checkNumberOperands(expr.operator, left, right);
                 return (double) left - (double) right;
-            }
-            case STAR -> {
-                checkNumberOperand(expr.operator, left, right);
-                return (double) left * (double) right;
-            }
-            case SLASH -> {
-                checkNumberOperand(expr.operator, left, right);
-                detectDivisorIsZero(expr.operator, right);
-                return (double) left / (double) right;
-            }
-            case PLUS -> {
+            case PLUS:
                 if (left instanceof Double && right instanceof Double) {
                     return (double) left + (double) right;
-                }
-                if ((left instanceof String || left instanceof Double) && (right instanceof String || right instanceof Double)) {
-                    if (left instanceof Double) {
-                        return left.toString().substring(0, left.toString().length() - 2) + right;
-                    }
+                } // [plus]
 
-                    if (right instanceof Double) {
-                        return left + right.toString().substring(0, right.toString().length() - 2);
-                    }
+                if (left instanceof String && right instanceof String) {
+                    return (String) left + (String) right;
                 }
-                throw new RuntimeError(expr.operator, "operand must be two number or two string.");
-            }
+
+                throw new RuntimeError(expr.operator,
+                        "Operands must be two numbers or two strings.");
+            case SLASH:
+                checkNumberOperands(expr.operator, left, right);
+                return (double) left / (double) right;
+            case STAR:
+                checkNumberOperands(expr.operator, left, right);
+                return (double) left * (double) right;
         }
 
+        // Unreachable.
         return null;
     }
 
@@ -318,30 +197,129 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
         Object callee = evaluate(expr.callee);
 
         List<Object> arguments = new ArrayList<>();
-        for (Expr argument : expr.arguments) {
+        for (Expr argument : expr.arguments) { // [in-order]
             arguments.add(evaluate(argument));
         }
 
-        // check invalid func call
         if (!(callee instanceof LoxCallable)) {
-            throw new RuntimeError(expr.paren, "can only call function and classes.");
+            throw new RuntimeError(expr.paren,
+                    "Can only call functions and classes.");
         }
 
         LoxCallable function = (LoxCallable) callee;
-        // check call arguments whether equal function.arity
         if (arguments.size() != function.arity()) {
-            throw new RuntimeError(expr.paren, "Excepted "
-                                    + function.arity() + " arguments but got" + arguments.size() + ".");
+            throw new RuntimeError(expr.paren, "Expected " +
+                    function.arity() + " arguments but got " +
+                    arguments.size() + ".");
         }
 
         return function.call(this, arguments);
     }
 
-    private boolean isEqual(Object left, Object right) {
-        if (left == null && right == null) return true;
-        if (left == null) return false;
-
-        return left.equals(right);
+    @Override
+    public Object visitGroupingExpr(Expr.Grouping expr) {
+        return evaluate(expr.expression);
     }
 
+    @Override
+    public Object visitLiteralExpr(Expr.Literal expr) {
+        return expr.value;
+    }
+
+    @Override
+    public Object visitLogicalExpr(Expr.Logical expr) {
+        Object left = evaluate(expr.left);
+
+        if (expr.operator.type == TokenType.OR) {
+            if (isTruthy(left)) return left;
+        } else {
+            if (!isTruthy(left)) return left;
+        }
+
+        return evaluate(expr.right);
+    }
+
+    @Override
+    public Object visitUnaryExpr(Expr.Unary expr) {
+        Object right = evaluate(expr.right);
+
+        switch (expr.operator.type) {
+            case BANG:
+                return !isTruthy(right);
+            case MINUS:
+                checkNumberOperand(expr.operator, right);
+                return -(double) right;
+        }
+
+        // Unreachable.
+        return null;
+    }
+
+    @Override
+    public Object visitVariableExpr(Expr.Variable expr) {
+        return lookUpVariable(expr.name, expr);
+    }
+
+    private Object lookUpVariable(Token name, Expr expr) {
+        Integer distance = locals.get(expr);
+        if (distance != null) {
+            return environment.getAt(distance, slots.get(expr));
+        } else {
+            if (globals.containsKey(name.lexeme)) {
+                return globals.get(name.lexeme);
+            } else {
+                throw new RuntimeError(name,
+                        "Undefined variable '" + name.lexeme + "'.");
+            }
+        }
+    }
+
+    private void checkNumberOperand(Token operator, Object operand) {
+        if (operand instanceof Double) return;
+        throw new RuntimeError(operator, "Operand must be a number.");
+    }
+
+    private void checkNumberOperands(Token operator,
+                                     Object left, Object right) {
+        if (left instanceof Double && right instanceof Double) return;
+        // [operand]
+        throw new RuntimeError(operator, "Operands must be numbers.");
+    }
+
+    private boolean isTruthy(Object object) {
+        if (object == null) return false;
+        if (object instanceof Boolean) return (boolean) object;
+        return true;
+    }
+
+    private boolean isEqual(Object a, Object b) {
+        // nil is only equal to nil.
+        if (a == null && b == null) return true;
+        if (a == null) return false;
+
+        return a.equals(b);
+    }
+
+    private String stringify(Object object) {
+        if (object == null) return "nil";
+
+        // Hack. Work around Java adding ".0" to integer-valued doubles.
+        if (object instanceof Double) {
+            String text = object.toString();
+            if (text.endsWith(".0")) {
+                text = text.substring(0, text.length() - 2);
+            }
+            return text;
+        }
+
+        return object.toString();
+    }
+
+    private void define(Token name, Object value) {
+        if (environment != null) {
+            environment.define(value);
+        } else {
+            globals.put(name.lexeme, value);
+        }
+    }
 }

@@ -3,7 +3,7 @@ package com.craftinginterpreters.lox;
 import java.util.List;
 
 public class LoxFunction implements LoxCallable {
-//    private final String name;
+    //    private final String name;
     private final Stmt.Function declaration;
     private final Environment closure;
 
@@ -26,21 +26,36 @@ public class LoxFunction implements LoxCallable {
         return declaration.params.size();
     }
 
+//     @Override
+//     public Object call(Interpreter interpreter, List<Object> arguments) {
+// //        Environment environment = new Environment(interpreter.globals);
+//         Environment environment = new Environment(closure);
+
+//         for (int i = 0; i < declaration.params.size(); i++) {
+//             environment.define(declaration.params.get(i).lexeme, arguments.get(i));
+//         }
+//         // 使用异常来控制return返回， 如果到函数体结束都没有对应的return, 则隐式的返回nil.
+//         try {
+//             interpreter.executeBlock(declaration.body, environment);
+//         } catch (Return returnValue) {
+//             return returnValue.value;
+//         }
+
+//         return null;
+//     }
+
     @Override
     public Object call(Interpreter interpreter, List<Object> arguments) {
-//        Environment environment = new Environment(interpreter.globals);
         Environment environment = new Environment(closure);
-
         for (int i = 0; i < declaration.params.size(); i++) {
-            environment.define(declaration.params.get(i).lexeme, arguments.get(i));
+            environment.define(arguments.get(i));
         }
-        // 使用异常来控制return返回， 如果到函数体结束都没有对应的return, 则隐式的返回nil.
+
         try {
             interpreter.executeBlock(declaration.body, environment);
         } catch (Return returnValue) {
             return returnValue.value;
         }
-
         return null;
     }
 }
