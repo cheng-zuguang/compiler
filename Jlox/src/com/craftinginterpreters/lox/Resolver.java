@@ -82,6 +82,13 @@ public class Resolver implements Expr.Visitor<Void>, Stmt.Visitor<Void> {
             resolveFunction(method, declaration);
         }
 
+        for (Stmt.Function method : stmt.classMethods) {
+            beginScope();
+            scopes.peek().put("this", true);
+            resolveFunction(method, FunctionType.METHOD);
+            endScope();
+        }
+
         define(stmt.name);
         endScope();
 
