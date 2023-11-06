@@ -228,19 +228,26 @@ public class Parser {
     private Stmt.Function function(String kind) {
         Token name = consume(IDENTIFIER, "Excepted " + kind + " name.");
 
-        consume(LEFT_PAREN, "Excepted '(' after " + kind + " name.");
-        // parameters     → IDENTIFIER ( ","  IDENTIFIER )* ;
-        List<Token> parameters = new ArrayList<>();
-        if (!check(RIGHT_PAREN)) {
-            do {
-                if (parameters.size() >= 8) {
-                    error(peek(), "Can't have more than 8 parameters.");
-                }
+        // distinguish the getter or setter by whether parameters is null.
+        List<Token> parameters = null;
 
-                parameters.add(consume(IDENTIFIER, "Expect parameter name."));
-            } while (match(COMMA));
+        if (!kind.equals("method") || check(LEFT_PAREN)) {
+            consume(LEFT_PAREN, "Excepted '(' after " + kind + " name.");
+            // parameters     → IDENTIFIER ( ","  IDENTIFIER )* ;
+            parameters = new ArrayList<>();
+            if (!check(RIGHT_PAREN)) {
+                do {
+                    if (parameters.size() >= 8) {
+                        error(peek(), "Can't have more than 8 parameters.");
+                    }
+
+                    parameters.add(consume(IDENTIFIER, "Expect parameter name."));
+                } while (match(COMMA));
+            }
+
+            consume(RIGHT_PAREN, "Expect ')' after parameters.");
         }
-        consume(RIGHT_PAREN, "Expect ')' after parameters.");
+
 
         consume(LEFT_BRACE, "Expected '{' before " + kind + " body.");
         List<Stmt> body = block();

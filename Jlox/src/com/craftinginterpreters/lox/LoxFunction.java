@@ -34,9 +34,12 @@ public class LoxFunction implements LoxCallable {
 //        Environment environment = new Environment(interpreter.globals);
         Environment environment = new Environment(closure);
 
-        for (int i = 0; i < declaration.params.size(); i++) {
-            environment.define(declaration.params.get(i).lexeme, arguments.get(i));
+        if (declaration.params != null) {
+            for (int i = 0; i < declaration.params.size(); i++) {
+                environment.define(declaration.params.get(i).lexeme, arguments.get(i));
+            }
         }
+
         // 使用异常来控制return返回， 如果到函数体结束都没有对应的return, 则隐式的返回nil.
         try {
             interpreter.executeBlock(declaration.body, environment);
@@ -56,5 +59,9 @@ public class LoxFunction implements LoxCallable {
         Environment environment = new Environment(closure);
         environment.define("this", instance);
         return new LoxFunction(declaration, environment, isInitializer);
+    }
+
+    public boolean isGetter() {
+        return declaration.params == null;
     }
 }
