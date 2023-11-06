@@ -1,22 +1,22 @@
-var a = "global";
-{
-  fun showA() {
-    print a;
-  }
-
-  showA();
-  var a = "block";
-  showA();
-}
-
-var b = "outer";
-{
-  var b = a;
-}
-
-class Test {
-    haveFun() {
+class Bacon {
+    init(name, age) {
+        this.name = name;
+        this.age = age;
     }
+
+  eat() {
+    print this.name + this.age + " eat bacon";
+  }
 }
 
-print Test;
+fun abc() {
+    print this;
+}
+
+var b = Bacon("Tom", 23);
+
+b.eat();
+
+print b.init("aa", "b");
+
+ abc();

@@ -28,6 +28,10 @@ class AstPrinter implements Expr.Visitor<String>, Stmt.Visitor<String> {
         return stmt.name.lexeme;
     }
 
+    @Override
+    public String visitThisExpr(Expr.This expr) {
+        return expr.keyword.lexeme;
+    }
 
     @Override
     public String visitExpressionStmt(Stmt.Expression stmt) {
