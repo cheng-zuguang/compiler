@@ -12,7 +12,7 @@ import static com.craftinginterpreters.lox.TokenType.*;
                      | funDecl
                      | varDecl
                      | statement ;
-    classDecl      → "class" IDENTIFIER "{" function* "}" ;
+    classDecl      → "class" IDENTIFIER  ( "<" IDENTIFIER )? "{" function* "}" ;
     funDecl        → "fun" function;
     varDecl        → "var" IDENTIFIER ("=" expression ) ? ";" ;
     statement      → exprStmt
@@ -49,6 +49,7 @@ import static com.craftinginterpreters.lox.TokenType.*;
     primary        → NUMBER | STRING | "true" | "false" | "nil"
                    | "(" expression ")"
                    | IDENTIFIER
+                   | "super" "." IDENTIFIER
                    // error productions
                    | ("!=" | "==") equality
                    | (">" || ">=" || "<" || "<=") comparison
@@ -112,8 +113,16 @@ public class Parser {
         }
     }
 
+    // classDecl      → "class" IDENTIFIER  ( "<" IDENTIFIER )? "{" function* "}" ;
     private Stmt classDeclaration() {
         Token name = consume(IDENTIFIER, "Excepted class name.");
+
+        Expr.Variable superClass = null;
+        if (match(LESS)) {
+            consume(IDENTIFIER, "Expected superclass name.");
+            superClass = new Expr.Variable(previous());
+        }
+
         consume(LEFT_BRACE, "Excepted '{' after class name.");
 
         List<Stmt.Function> methods = new ArrayList<>();
@@ -122,7 +131,7 @@ public class Parser {
         }
 
         consume(RIGHT_BRACE, "Excepted '}' after class body.");
-        return new Stmt.Class(name, methods);
+        return new Stmt.Class(name, superClass, methods);
     }
 
     // statement      → exprStmt | forStmt | ifStmt | printStmt | whileStmt | block ;
@@ -470,7 +479,7 @@ public class Parser {
         return expr;
     }
 
-    // primary        → NUMBER | STRING | "true" | "false" | "nil" | "(" expression ")" | IDENTIFIER ;
+    // primary        → NUMBER | STRING | "true" | "false" | "nil" | "(" expression ")" | IDENTIFIER | "super" "." IDENTIFIER;
     private Expr primary() {
         if (match(FALSE)) return new Expr.Literal(false);
         if (match(TRUE)) return new Expr.Literal(true);
@@ -478,6 +487,13 @@ public class Parser {
 
         if (match(NUMBER, STRING)) {
             return new Expr.Literal(previous().literal);
+        }
+
+        if (match(SUPER)) {
+            Token keyword = previous();
+            consume(DOT, "Except '.' after 'super'.");
+            Token method = consume(IDENTIFIER, "Expect superclass method name.");
+            return new Expr.Super(keyword, method);
         }
 
         if (match(THIS)) {
