@@ -1,25 +1,31 @@
-class Bacon {
-    init(name, age) {
-        this.name = name;
-        this.age = age;
+trait A {
+    test() {
+        print "I'm A";
     }
-
-  eat() {
-    print this.name + this.age + " eat bacon";
-  }
 }
 
-fun abc() {
-    print this;
+trait B {
+    test1() {
+            print "I'm B";
+        }
 }
 
+trait Compose with A, B {
+    test3() {
+        this.test();
+        this.test1();
+    }
+}
 
- fun fib(n) {
-   if (n < 2) return n;
-   return fib(n - 1) + fib(n - 2);
- }
+trait Test1 {
+    abc() {
+        print "abc";
+    }
+}
 
- var before = clock();
- print fib(40);
- var after = clock();
- print after - before;
+class C with Compose, Test1 {}
+
+var c = C();
+c.test();
+c.test3();
+c.abc();

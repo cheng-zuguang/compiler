@@ -11,13 +11,16 @@ import static com.craftinginterpreters.lox.TokenType.*;
     declaration    → classDecl
                      | funDecl
                      | varDecl
+                     | traitDecl
                      | statement ;
-    classDecl      → "class" IDENTIFIER  ( "<" IDENTIFIER )? "{" function* "}" ;
+    classDecl      → "class" IDENTIFIER  ( "<" IDENTIFIER )? ( "with" IDENTIFIER (, IDENTIFIER)? )? "{" function* "}" ;
     funDecl        → "fun" function;
+    traitDecl      → "trait" IDENTIFIER "with" IDENTIFIER (, IDENTIFIER)? "{" function* "}";
     varDecl        → "var" IDENTIFIER ("=" expression ) ? ";" ;
     statement      → exprStmt
                      | forStmt
                      | ifStmt
+                     | traitStmt
                      | printStmt
                      | returnStmt
                      | whileStmt
@@ -27,7 +30,8 @@ import static com.craftinginterpreters.lox.TokenType.*;
                      ")" statement ;
     whileStmt      → "while" "(" expression ")" statement ;
     ifStmt         → "if" "(" expression ")" statement
-                     ( "else" statement )? ;
+                     ( "else" statement )?;
+    traitStmt      →
     block          → "{" declaration* "}" ;
     exprStmt       → expression ";" ;
     printStmt      → "print" expression ";" ;
@@ -103,6 +107,10 @@ public class Parser {
                 return function("function");
             }
 
+            if (match(TRAIT)) {
+                return traitDeclaration();
+            }
+
             if (match(VAR)) {
                 return varDeclaration();
             }
@@ -113,7 +121,7 @@ public class Parser {
         }
     }
 
-    // classDecl      → "class" IDENTIFIER  ( "<" IDENTIFIER )? "{" function* "}" ;
+    // classDecl      → "class" IDENTIFIER  ( "<" IDENTIFIER )? ( "with" IDENTIFIER (, IDENTIFIER)? )? "{" function* "}" ;
     private Stmt classDeclaration() {
         Token name = consume(IDENTIFIER, "Excepted class name.");
 
@@ -123,6 +131,8 @@ public class Parser {
             superClass = new Expr.Variable(previous());
         }
 
+        List<Expr> traits = withClause();
+
         consume(LEFT_BRACE, "Excepted '{' after class name.");
 
         List<Stmt.Function> methods = new ArrayList<>();
@@ -131,7 +141,34 @@ public class Parser {
         }
 
         consume(RIGHT_BRACE, "Excepted '}' after class body.");
-        return new Stmt.Class(name, superClass, methods);
+        return new Stmt.Class(name, superClass, traits, methods);
+    }
+
+    // traitDecl      → "trait" IDENTIFIER "with" IDENTIFIER (, IDENTIFIER)? "{" function* "}";
+    private Stmt traitDeclaration() {
+        Token name = consume(IDENTIFIER, "Expect trait name.");
+        List<Expr> traits = withClause();
+
+        consume(LEFT_BRACE, "Expect '}' before trait body.");
+        List<Stmt.Function> methods = new ArrayList<>();
+        while (!check(RIGHT_BRACE) && !isAtEnd()) {
+            methods.add(function("method"));
+        }
+
+        consume(RIGHT_BRACE, "Except '}' after trait body.");
+        return  new Stmt.Trait(name, traits, methods);
+    }
+
+    private List<Expr> withClause() {
+        List<Expr> traits = new ArrayList<>();
+        if (match(WITH)) {
+            do {
+                consume(IDENTIFIER, "Except identifier after 'with'");
+                traits.add(new Expr.Variable(previous()));
+            } while (match(COMMA));
+        }
+
+        return traits;
     }
 
     // statement      → exprStmt | forStmt | ifStmt | printStmt | whileStmt | block ;
