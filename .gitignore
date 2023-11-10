@@ -5,3 +5,5 @@ Jlox.iml
 
 .idea
 out
+
+cmake-build-debug
