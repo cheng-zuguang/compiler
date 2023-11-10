@@ -14,14 +14,23 @@ typedef enum {
 } OpCode;
 
 typedef struct {
+    // 当前instruction的index
+    int offset;
+    int line;
+} LineStart;
+
+typedef struct {
     // 当前已使用的空间
     int count;
     // 数组的容量
     int capacity;
     // opcode
     uint8_t* code;
-    // 行信息
-    int* lines;
+//    // 行信息
+//    int* lines;
+    int lineCount;
+    int lineCapacity;
+    LineStart* lines;
     // 值
     ValueArray constants;
 } Chunk;
@@ -30,5 +39,7 @@ void initChunk(Chunk* chunk);
 void writeChunk(Chunk* chunk, uint8_t byte, int line);
 void freeChunk(Chunk* chunk);
 int addConstant(Chunk* chunk, Value value);
+
+int getLine(Chunk* chunk, int instruction);
 
 #endif //CLOX_CHUNK_H
