@@ -34,6 +34,23 @@ int addConstant(Chunk* chunk, Value value) {
     return chunk->constants.count - 1;
 }
 
+void writeConstant(Chunk* chunk, Value value, int line) {
+    int ix = addConstant(chunk, value);
+    if (ix < 256) {
+        writeChunk(chunk, OP_CONSTANT, line);
+        writeChunk(chunk, (uint8_t) ix, line);
+    } else {
+        writeChunk(chunk, OP_CONSTANT_LONG, line);
+        // 截取超过255部分
+        writeChunk(chunk, (uint8_t) (ix & 0xff), line);
+        // 除2^8次方再截取超过255部分
+        writeChunk(chunk, (uint8_t) ((ix >> 8) & 0xff), line);
+        // 除2^16次方再截取超过255部分
+        writeChunk(chunk, (uint8_t) ((ix >> 16) & 0xff), line);
+    }
+}
+
+
 
 void freeChunk(Chunk* chunk) {
     FREE_ARRAY(uint8_t, chunk->code, chunk->capacity);

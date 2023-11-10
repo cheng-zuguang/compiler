@@ -10,6 +10,8 @@
 
 typedef enum {
     OP_CONSTANT,
+    // FOR 24-bit number
+    OP_CONSTANT_LONG,
     OP_RETURN
 } OpCode;
 
@@ -30,5 +32,6 @@ void initChunk(Chunk* chunk);
 void writeChunk(Chunk* chunk, uint8_t byte, int line);
 void freeChunk(Chunk* chunk);
 int addConstant(Chunk* chunk, Value value);
+void writeConstant(Chunk* chunk, Value value, int line);
 
 #endif //CLOX_CHUNK_H
