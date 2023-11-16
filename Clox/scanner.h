@@ -29,6 +29,7 @@ typedef enum {
 
 typedef struct {
     TokenType type;
+    // 指向词元（lexeme）的开始
     const char* start;
     int length;
     int line;
