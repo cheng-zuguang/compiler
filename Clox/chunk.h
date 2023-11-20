@@ -10,10 +10,20 @@
 
 typedef enum {
     OP_CONSTANT,
+    OP_NIL,
+    OP_TRUE,
+    OP_FALSE,
+    OP_EQUAL,
+    // OP_BANG_EQUAL -> OP_NOT(OP_EQUAL) -> !(a == b)
+    OP_GREATER,
+    // OP_GREATER_EQUAL -> OP_NOT(OP_LESS) -> !(a < b)
+    OP_LESS,
+    // OP_LESS_EQUAL -> OP_NOT(OP_GREATER) -> !(a > b)
     OP_ADD,
     OP_SUBTRACT,
     OP_MULTIPLY,
     OP_DIVIDE,
+    OP_NOT,
     // unary
     OP_NEGATE,
     OP_RETURN
