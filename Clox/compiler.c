@@ -166,7 +166,7 @@ static void number() {
 // case: str-variable.
 static void string() {
     // trim the leading and trailing quotation marks.
-    emitConstant(OBJ_VAL(copyString(parser.previous.start + 1, parser.previous.length - 2)));
+    emitConstant(OBJ_VAL(makeString(false, parser.previous.start + 1, parser.previous.length - 2)));
 }
 
 // case: the four horseman of Arithmetic: +, -, /, *

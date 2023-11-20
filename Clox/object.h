@@ -29,13 +29,15 @@ struct Obj {
 struct ObjString {
     // type
     Obj obj;
+    bool ownsChars;
     int length;
     // heap-allocated array.
-    char* chars;
+    const char* chars;
 };
 
 ObjString* takeString(char* chars, int length);
 ObjString* copyString(const char* chars, int length);
+ObjString* makeString(bool ownsChars, char* chars, int length);
 void printObject(Value value);
 
 // A macro is expanded by inserting the argument expression every place the parameter name appears in the body.
