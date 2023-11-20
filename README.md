@@ -11,5 +11,8 @@
 - then `node 05_SimpleScript.js`
 
 ### In Jlox dir
-- implement Lox Script language by java
+- implement Lox script language by java
 - need config java env
+
+### In Clox dir
+- implement Lox script language by C
