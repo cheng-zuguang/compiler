@@ -15,6 +15,8 @@ add_executable(Clox
         memory.c
         value.h
         value.c
+        object.h
+        object.c
         vm.h
         vm.c
         compiler.h

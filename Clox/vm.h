@@ -22,6 +22,9 @@ typedef struct {
     // As with the top of ip,using pointer since it is faster to dereference the pointer than calculate the offset from the ix.
     // point past the element containing the top value on the stack.
     Value* stackTop;
+
+    // obj reference.
+    Obj* objects;
 } VM;
 
 // For exiting the process by this(static error, runtime error).
@@ -30,6 +33,9 @@ typedef enum {
     INTERPRET_COMPILE_ERROR,
     INTERPRET_RETURNING_ERROR
 } InterpretResult;
+
+// for free the obj memory.
+extern VM vm;
 
 void initVM();
 void freeVM();

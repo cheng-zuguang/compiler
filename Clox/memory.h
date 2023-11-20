@@ -1,10 +1,20 @@
 //
 // Created by 42134 on 2023/11/9.
 //
-#include "stdlib.h"
-
 #ifndef CLOX_MEMORY_H
 #define CLOX_MEMORY_H
+
+#include <stdlib.h>
+
+#include "common.h"
+#include "object.h"
+
+
+#define ALLOCATE(type, count) \
+    (type*)reallocate(NULL, 0, sizeof(type) * (count))
+
+// using reallocate() to free memory for helping VM track the memory usage.
+#define FREE(type, pointer) reallocate(pointer, sizeof(type), 0)
 
 #define GROW_CAPACITY(capacity) \
     ((capacity) < 8 ? 8 : (capacity) * 2)
@@ -17,5 +27,6 @@
     reallocate(pointer, sizeof(type) * (oldCount), 0)
 
 void* reallocate(void* pointer, size_t oldSize, size_t newSize);
+void freeObjects();
 
 #endif //CLOX_MEMORY_H

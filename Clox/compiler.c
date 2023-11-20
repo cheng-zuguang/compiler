@@ -7,6 +7,7 @@
 #include "compiler.h"
 #include "scanner.h"
 #include "debug.h"
+#include "object.h"
 
 typedef struct {
     Token current;
@@ -162,6 +163,12 @@ static void number() {
     emitConstant(NUMBER_VAL(value));
 }
 
+// case: str-variable.
+static void string() {
+    // trim the leading and trailing quotation marks.
+    emitConstant(OBJ_VAL(copyString(parser.previous.start + 1, parser.previous.length - 2)));
+}
+
 // case: the four horseman of Arithmetic: +, -, /, *
 // determining Binary Expression by the first two token,
 // the left operand has evaluated, so the binary() is handling the rest of
@@ -276,7 +283,7 @@ ParseRule rules[] = {
         [TOKEN_LESS]          = {NULL, binary, PREC_COMPARISON},
         [TOKEN_LESS_EQUAL]    = {NULL, binary, PREC_COMPARISON},
         [TOKEN_IDENTIFIER]    = {NULL, NULL, PREC_NONE},
-        [TOKEN_STRING]        = {NULL, NULL, PREC_NONE},
+        [TOKEN_STRING]        = {string, NULL, PREC_NONE},
         [TOKEN_NUMBER]        = {number, NULL, PREC_NONE},
         [TOKEN_AND]           = {NULL, NULL, PREC_NONE},
         [TOKEN_CLASS]         = {NULL, NULL, PREC_NONE},

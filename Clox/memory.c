@@ -3,6 +3,7 @@
 //
 #include <stdlib.h>
 #include "memory.h"
+#include "vm.h"
 
 // 通过传的size来确定要做的操作
 /*
@@ -24,4 +25,26 @@ void* reallocate(void* pointer, size_t oldSize, size_t newSize) {
     if (result == NULL) exit(1);
 
     return result;
+}
+
+static void freeObject(Obj* obj) {
+    switch (obj->type) {
+        case OBJ_STRING: {
+            ObjString* string = (ObjString*)obj;
+            // free chars array.
+            FREE_ARRAY(char, string->chars, string->length + 1);
+            // free obj.
+            FREE(ObjString, obj);
+            break;
+        }
+    }
+}
+
+void freeObjects() {
+    Obj* object = vm.objects;
+    while (object != NULL) {
+       Obj* next = object->next;
+       freeObject(object);
+       object = next;
+    }
 }
