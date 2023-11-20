@@ -32,9 +32,10 @@ static void freeObject(Obj* obj) {
         case OBJ_STRING: {
             ObjString* string = (ObjString*)obj;
             // free chars array.
-            FREE_ARRAY(char, string->chars, string->length + 1);
-            // free obj.
-            FREE(ObjString, obj);
+//            FREE_ARRAY(char, string->chars, string->length + 1);
+//            // free obj.
+//            FREE(ObjString, obj);
+            reallocate(obj, sizeof(ObjString) + string->length + 1, 0);
             break;
         }
     }

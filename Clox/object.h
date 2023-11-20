@@ -26,15 +26,24 @@ struct Obj {
     struct Obj* next;
 };
 
+//struct ObjString {
+//    // type
+//    Obj obj;
+//    int length;
+//    // heap-allocated array.
+//    char* chars;
+//};
+
 struct ObjString {
     // type
     Obj obj;
     int length;
     // heap-allocated array.
-    char* chars;
+    char chars[];
 };
 
-ObjString* takeString(char* chars, int length);
+ObjString* makeString(int length);
+// ObjString* takeString(char* chars, int length);
 ObjString* copyString(const char* chars, int length);
 void printObject(Value value);
 
