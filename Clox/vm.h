@@ -7,6 +7,7 @@
 
 #include "chunk.h"
 #include "value.h"
+#include "table.h"
 
 #define STACK_MAX 256
 
@@ -22,6 +23,9 @@ typedef struct {
     // As with the top of ip,using pointer since it is faster to dereference the pointer than calculate the offset from the ix.
     // point past the element containing the top value on the stack.
     Value* stackTop;
+
+    // all intern strings(symbol).
+    Table strings;
 
     // obj reference.
     Obj* objects;

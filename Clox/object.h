@@ -32,6 +32,8 @@ struct ObjString {
     int length;
     // heap-allocated array.
     char* chars;
+    // to small, end up colliding. Hash the all entries and cache it.
+    uint32_t hash;
 };
 
 ObjString* takeString(char* chars, int length);
