@@ -13,6 +13,10 @@ typedef enum {
     OP_NIL,
     OP_TRUE,
     OP_FALSE,
+    OP_POP,
+    OP_GET_GLOBAL,
+    OP_SET_GLOBAL,
+    OP_DEFINE_GLOBAL,
     OP_EQUAL,
     // OP_BANG_EQUAL -> OP_NOT(OP_EQUAL) -> !(a == b)
     OP_GREATER,
@@ -26,6 +30,7 @@ typedef enum {
     OP_NOT,
     // unary
     OP_NEGATE,
+    OP_PRINT,
     OP_RETURN
 } OpCode;
 

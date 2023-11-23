@@ -24,6 +24,9 @@ typedef struct {
     // point past the element containing the top value on the stack.
     Value* stackTop;
 
+    // all global variable name.
+    Table globals;
+
     // all intern strings(symbol).
     Table strings;
 

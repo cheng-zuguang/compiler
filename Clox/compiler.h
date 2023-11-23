@@ -8,6 +8,8 @@
 
 bool compile(const char* source, Chunk* chunk);
 
-
+static void expression();
+static void declaration();
+static void statement();
 
 #endif //CLOX_COMPILER_H
