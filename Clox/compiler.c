@@ -69,6 +69,10 @@ static uint8_t identifierConstant(Token* name);
 Parser parser;
 Chunk *compilingChunk;
 
+// the key is strings, its value is the index of the identifier in the constant table.
+Table stringConstants;
+
+
 // for compiling user-defined func
 // so encapsulate a func to return current chunk.
 static Chunk *currentChunk() {
@@ -394,7 +398,15 @@ static void parsePrecedence(Precedence precedence) {
 
 // add its lexeme to constant table constant as string and return ix;
 static uint8_t identifierConstant(Token* name) {
-    return makeConstant(OBJ_VAL(copyString(name->start, name->length)));
+    ObjString* string = copyString(name->start, name->length);
+    Value indexValue;
+    if (tableGet(&stringConstants, string, &indexValue)) {
+        return (uint8_t) AS_NUMBER(indexValue);
+    }
+
+    uint8_t ix = makeConstant(OBJ_VAL(string));
+    tableSet(&stringConstants, string, NUMBER_VAL((double )ix));
+    return ix;
 }
 
 // consume current IDENTIFIER TOKEN, and add the token name in constant table.
@@ -501,6 +513,8 @@ bool compile(const char *source, Chunk *chunk) {
     parser.hadError = false;
     parser.panicMode = false;
 
+    initTable(&stringConstants);
+
     advance();
     while (!match(TOKEN_EOF)) {
         declaration();
@@ -509,5 +523,6 @@ bool compile(const char *source, Chunk *chunk) {
 //    consume(TOKEN_EOF, "Expected end of expression.");
 
     endCompiler();
+    freeTable(&stringConstants);
     return !parser.hadError;
 }
