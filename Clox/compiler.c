@@ -262,6 +262,11 @@ static void namedVariable(Token name, bool canAssign) {
 
 
     if (canAssign && match(TOKEN_EQUAL)) {
+        // determine the variable is constant.
+        if (check(TOKEN_CONST)) {
+            error("Assignment to constant variable. ");
+        }
+
         // if we see the =, we compile it as an assignment or setter instead of variable access or getter.
         expression();
         emitBytes(setOp, (uint8_t) arg);
@@ -406,6 +411,7 @@ ParseRule rules[] = {
         [TOKEN_THIS]          = {NULL, NULL, PREC_NONE},
         [TOKEN_TRUE]          = {literal, NULL, PREC_NONE},
         [TOKEN_VAR]           = {NULL, NULL, PREC_NONE},
+        [TOKEN_CONST]           = {NULL, NULL, PREC_NONE},
         [TOKEN_WHILE]         = {NULL, NULL, PREC_NONE},
         [TOKEN_ERROR]         = {NULL, NULL, PREC_NONE},
         [TOKEN_EOF]           = {NULL, NULL, PREC_NONE},
@@ -604,6 +610,7 @@ static void synchronize() {
             case TOKEN_CLASS:
             case TOKEN_FUN:
             case TOKEN_VAR:
+            case TOKEN_CONST:
             case TOKEN_FOR:
             case TOKEN_IF:
             case TOKEN_WHILE:
@@ -619,7 +626,7 @@ static void synchronize() {
 }
 
 static void declaration() {
-    if (match(TOKEN_VAR)) {
+    if (match(TOKEN_VAR) || match(TOKEN_CONST)) {
         varDeclaration();
     } else {
         statement();
