@@ -169,6 +169,18 @@ static void emitBytes(uint8_t byte1, uint8_t byte2) {
     emitByte(byte2);
 }
 
+// back-patching(回溯)
+// emit the jump instruction first with placeholder offset operand.
+// then we compile the then body, we know how far to jump.
+// so we go back and replace that placeholder offset operand.
+static int emitJump(uint8_t instruction) {
+    emitByte(instruction);
+    // two bits as jump offset, range(0 - 65,535)
+    emitByte(0xff);
+    emitByte(0xff);
+    return currentChunk()->count - 2;
+}
+
 static void emitReturn() {
     // temporarily use OP_RETURN to print value.
     emitByte(OP_RETURN);
@@ -190,6 +202,18 @@ static void emitConstant(Value value) {
     // 1.push opcode in stack
     // 2. insert value in constant table.
     emitBytes(OP_CONSTANT, makeConstant(value));
+}
+
+static void patchJump(int offset) {
+    // -2 to adjust for the bytecode for the jump offset itself.
+    int jump = currentChunk()->count - offset - 2;
+
+    if (jump > UINT16_MAX) {
+        error("Too much code to jump.");
+    }
+
+    currentChunk()->code[offset] = (jump >> 8) & 0xff;
+    currentChunk()->code[offset + 1] = jump & 0xff;
 }
 
 static void initCompiler(Compiler* compiler) {
@@ -584,6 +608,29 @@ static void expressionStatement() {
     emitByte(OP_POP);
 }
 
+// ifStmt         → "if" "(" expression ")" statement
+//                  ( "else" statement )? ;
+static void ifStatement() {
+    consume(TOKEN_LEFT_PAREN, "Excepted '(' after the if statement.");
+    expression();
+    consume(TOKEN_RIGHT_PAREN, "Excepted ')' after the condition.");
+
+    // the operand for how much offset the ip will skip. (for then branch)
+    int thenJump = emitJump(OP_JUMP_IF_FALSE);
+    emitByte(OP_POP);
+    statement();
+
+    // (for else branch)
+    int elseBranch = emitJump(OP_JUMP);
+
+    patchJump(thenJump);
+    emitByte(OP_POP);
+
+    if (match(TOKEN_ELSE)) statement();
+
+    patchJump(elseBranch);
+}
+
 static void printStatement() {
     expression();
     consume(TOKEN_SEMICOLON, "Expect ';' after value.");
@@ -633,6 +680,8 @@ static void declaration() {
 static void statement() {
     if (match(TOKEN_PRINT)) {
         printStatement();
+    } else if (match(TOKEN_IF)) {
+        ifStatement();
     } else if (match(TOKEN_LEFT_BRACE)) {
         beginScope();
         block();
