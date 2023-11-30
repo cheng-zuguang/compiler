@@ -88,6 +88,9 @@ Parser parser;
 Compiler* current = NULL;
 Chunk *compilingChunk;
 
+int innermostLoopStart = -1;
+int innermostLoopScopeDepth = 0;
+
 // for compiling user-defined func
 // so encapsulate a func to return current chunk.
 static Chunk *currentChunk() {
@@ -657,7 +660,13 @@ static void forStatement() {
         expressionStatement();
     }
 
-    int loopStart = currentChunk()->count;
+//    int loopStart = currentChunk()->count;
+
+    int surroundingLoopStart = innermostLoopStart;
+    int surroundingLoopScopeDepth = innermostLoopScopeDepth;
+    innermostLoopStart = currentChunk()->count;
+    innermostLoopScopeDepth = current->scopeDepth;
+
     // exit the loop
     int exitJump = -1;
     if (!match(TOKEN_SEMICOLON)) {
@@ -677,20 +686,43 @@ static void forStatement() {
         consume(TOKEN_RIGHT_PAREN, "Excepted ')' after clauses.");
 
         // jump over the increment, run the body, and jump back up the increment, run it.
-        emitLoop(loopStart);
-        loopStart = incrementStart;
-        patchJump(loopStart);
+        emitLoop(innermostLoopStart);
+        innermostLoopStart = incrementStart;
+        patchJump(bodyJump);
     }
 
     statement();
-    emitLoop(loopStart);
+    emitLoop(innermostLoopStart);
 
     if (exitJump != -1) {
         patchJump(exitJump);
         emitByte(OP_POP);
     }
 
+    innermostLoopStart = surroundingLoopStart;
+    innermostLoopScopeDepth = surroundingLoopScopeDepth;
+
     endScope();
+}
+
+static void continueStatement() {
+    if (innermostLoopStart == -1) {
+        error("Can't use 'continue' outside of loop.");
+    }
+
+    consume(TOKEN_SEMICOLON, "Expect ';' after continue.");
+
+    // discard any locals created inside loop.
+    for (
+            int i = current->localCount - 1;
+            i >= 0 && current->locals[i].depth > innermostLoopScopeDepth;
+            i--
+            ) {
+        emitByte(OP_POP);
+    }
+
+    // jump to the top of current innermost loop.
+    emitLoop(innermostLoopStart);
 }
 
 // ifStmt         → "if" "(" expression ")" statement
@@ -788,6 +820,8 @@ static void statement() {
         whileStatement();
     } else if (match(TOKEN_FOR)) {
         forStatement();
+    } else if (match(TOKEN_CONTINUE)) {
+        continueStatement();
     } else if (match(TOKEN_LEFT_BRACE)) {
         beginScope();
         block();
