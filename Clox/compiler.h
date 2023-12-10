@@ -2,11 +2,12 @@
 // Created by 42134 on 2023/11/14.
 //
 #include "vm.h"
+#include "object.h"
 
 #ifndef CLOX_COMPILER_H
 #define CLOX_COMPILER_H
 
-bool compile(const char* source, Chunk* chunk);
+ObjFunction* compile(const char* source);
 
 static void expression();
 static void declaration();
