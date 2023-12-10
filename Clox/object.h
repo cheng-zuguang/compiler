@@ -45,7 +45,7 @@ typedef struct {
 
 // native function.
 // argCount: arguments count, args: point the first argument.
-typedef Value (*NativeFn) (int argCount, Value* args);
+typedef bool (*NativeFn) (int argCount, Value* args);
 typedef struct {
     // function header
     Obj obj;
