@@ -808,13 +808,21 @@ static void expressionStatement() {
 // forStmt    →   "for" "("  ( varDecl | exprStmt | ";" ) expression? ";" expression? ")" statement ;
 static void forStatement() {
     beginScope();
+
+//    grab the name adn slot of the loop variable so we can refer to it later.
+    int loopVariable = -1;
+    Token loopVariableName;
+    loopVariableName.start = NULL;
+
     consume(TOKEN_LEFT_PAREN, "Excepted '(' after the for.");
 
     // initializer
     if (match(TOKEN_SEMICOLON)) {
         // no initializer
     } else if (match(TOKEN_VAR)) {
+        loopVariableName = parser.current;
         varDeclaration();
+        loopVariable = current->localCount - 1;
     } else {
         expressionStatement();
     }
@@ -844,7 +852,32 @@ static void forStatement() {
         patchJump(bodyJump);
     }
 
+    // if the loop declares a variable
+    int innerVariable = -1;
+    if (loopVariable != -1) {
+        // create a scope for the copy
+        beginScope();
+        // define a new variable initialized with current value of the loop variable
+        emitBytes(OP_GET_LOCAL, (uint8_t) loopVariable);
+        addLocal(loopVariableName);
+        markInitialized();
+        // keep track of its slot.
+        innerVariable = current->localCount - 1;
+    }
+
     statement();
+
+    // if the loop declares a variable
+    if (loopVariable != -1) {
+        // 3: Store the inner variable back in the loop variable.
+        emitBytes(OP_GET_LOCAL, (uint8_t) innerVariable);
+        emitBytes(OP_SET_LOCAL, (uint8_t) loopVariable);
+        emitByte(OP_POP);
+
+        // 4: Close the temporary scope for the copy of the loop variable.
+        endScope();
+    }
+
     emitLoop(loopStart);
 
     if (exitJump != -1) {
