@@ -15,7 +15,10 @@
 
 typedef struct {
 //    ObjFunction* function;
-    ObjClosure* closure;
+//    ObjClosure* closure;
+// --> challenge 25.1
+    Obj* function;
+// --> challenge 25.1
     uint8_t* ip;
     // point the VM's value stack at the first slot that this function can use.
     Value* slots;
