@@ -49,7 +49,7 @@ static int constantInstruction(const char* name, Chunk* chunk, int offset) {
  * offset 下一条指令的偏移量
  * */
 int disassembleInstruction(Chunk* chunk, int offset) {
-    printf("%04d ", offset);
+    printf("offset: %04d  ", offset);
 
     // same line
     if (offset > 0 && chunk->lines[offset] == chunk->lines[offset-1]) {
@@ -79,7 +79,7 @@ int disassembleInstruction(Chunk* chunk, int offset) {
         case OP_SET_GLOBAL:
             return constantInstruction("OP_SET_GLOBAL", chunk, offset);
         case OP_DEFINE_GLOBAL:
-            return simpleInstruction("OP_DEFINE_GLOBAL", offset);
+            return constantInstruction("OP_DEFINE_GLOBAL", chunk, offset);
         case OP_EQUAL:
             return simpleInstruction("OP_EQUAL", offset);
         case OP_GREATER:

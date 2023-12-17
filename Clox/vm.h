@@ -22,7 +22,7 @@ typedef struct {
 
 typedef struct {
     // every CallFrames has its own ip and its own pointer to the ObjFunction that it's executing.
-    CallFrame* frames[FRAMES_MAX];
+    CallFrame frames[FRAMES_MAX];
     // stores the current height of the CallFrame stack——the number of ongoing function calls.
     int frameCount;
 

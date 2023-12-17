@@ -73,7 +73,7 @@ typedef enum {
     TYPE_SCRIPT
 } FunctionType;
 
-typedef struct {
+typedef struct Compiler {
     // each compiler point back to the Compiler for the function that encloses,
     // all the way back to the root Compiler for the top-level code.
     struct Compiler* enclosing;
@@ -99,7 +99,7 @@ static uint8_t argumentList();
 
 Parser parser;
 Compiler* current = NULL;
-Chunk *compilingChunk;
+//Chunk *compilingChunk;
 
 // for compiling user-defined func
 // so encapsulate a func to return current chunk.
@@ -708,6 +708,7 @@ static void function(FunctionType type) {
 // function  → IDENTIFIER "(" parameters? ")" block;
 static void funDeclaration() {
     uint8_t global = parseVariable("Expected function name");
+    // https://www.craftinginterpreters.com/local-variables.html#another-scope-edge-case
     // diff the variable declaration, You can’t call the function and execute the body until after it’s fully defined.
     markInitialized();
     function(TYPE_FUNCTION);
