@@ -8,9 +8,11 @@
 #define CLOX_COMPILER_H
 
 ObjFunction* compile(const char* source);
+void markCompilerRoots();
 
 static void expression();
 static void declaration();
 static void statement();
+
 
 #endif //CLOX_COMPILER_H

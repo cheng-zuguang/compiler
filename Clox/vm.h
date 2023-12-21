@@ -48,8 +48,18 @@ typedef struct {
     // the list of open upvalues.
     ObjUpvalue* openUpvalues;
 
+    // GC trade-off: throughput and latency
+    // base on the live size of the heap
+    size_t bytesAllocated; // the number of bytes of managed memory the VM has allocated.
+    size_t nextGC;  // threshold that trigger the next collection.
+
     // obj reference.
     Obj* objects;
+
+    // tricolor mark
+    int grayCount;
+    int grayCapacity;
+    Obj** grayStack;
 } VM;
 
 // For exiting the process by this(static error, runtime error).

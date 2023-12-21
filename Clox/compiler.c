@@ -10,6 +10,7 @@
 #include "scanner.h"
 #include "debug.h"
 #include "object.h"
+#include "memory.h"
 
 /*
  * BNF:
@@ -997,4 +998,14 @@ ObjFunction* compile(const char *source) {
 
     ObjFunction* function = endCompiler();
     return parser.hadError ? NULL : function;
+}
+
+void markCompilerRoots() {
+    Compiler* compiler = current;
+    while(compiler != NULL) {
+        // only object it uses in the ObjFunction it is compiling into.
+        // Since function declaration can nest, so walk through the linked list.
+        markObject((Obj*)compiler->function);
+        compiler = compiler->enclosing;
+    }
 }
