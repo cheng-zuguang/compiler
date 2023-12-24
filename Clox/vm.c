@@ -15,6 +15,22 @@
 
 VM vm;
 
+
+Value FALSE_VAL = {
+        VAL_NIL,
+        NULL
+};
+
+static Value hasFieldNative(int argCount, Value* args) {
+    if (argCount != 2) return FALSE_VAL;
+    if (!IS_INSTANCE(args[0])) return FALSE_VAL;
+    if (!IS_STRING(args[1])) return FALSE_VAL;
+
+    ObjInstance* instance = AS_INSTANCE(args[0]);
+    Value dummy;
+    return BOOL_VAL(tableGet(&instance->fields, AS_STRING(args[1]), &dummy));
+}
+
 static Value clockNative(int argCount, Value* args) {
     return NUMBER_VAL((double) clock() / CLOCKS_PER_SEC);
 }
@@ -80,6 +96,7 @@ void initVM() {
     initTable(&vm.globals);
     initTable(&vm.strings);
 
+    defineNative("hasField", hasFieldNative);
     defineNative("clock", clockNative);
 }
 
