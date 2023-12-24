@@ -38,6 +38,10 @@ struct Obj {
     struct Obj* next;
 };
 
+struct sObj {
+    uint64_t header;
+};
+
 typedef struct {
     Obj obj;
     // store the number of parameters the function expects

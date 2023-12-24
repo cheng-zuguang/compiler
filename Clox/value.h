@@ -7,7 +7,8 @@
 
 #include "common.h"
 
-typedef struct Obj Obj;
+//typedef struct Obj Obj;
+typedef struct sObj Obj;
 typedef struct ObjString ObjString;
 
 typedef enum {
