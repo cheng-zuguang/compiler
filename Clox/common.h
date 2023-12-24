@@ -21,3 +21,6 @@
 #define UINT8_COUNT (UINT8_MAX + 1)
 
 #endif //CLOX_COMMON_H
+
+#undef DEBUG_STRESS_GC
+#undef DEBUG_LOG_GC

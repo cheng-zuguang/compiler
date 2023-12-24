@@ -21,6 +21,8 @@ typedef enum {
     OP_SET_UPVALUE,
     OP_DEFINE_GLOBAL,
     OP_SET_GLOBAL,
+    OP_GET_PROPERTY,
+    OP_SET_PROPERTY,
     OP_EQUAL,
     // OP_BANG_EQUAL -> OP_NOT(OP_EQUAL) -> !(a == b)
     OP_GREATER,
@@ -41,7 +43,8 @@ typedef enum {
     OP_CALL,
     OP_CLOSURE,
     OP_CLOSE_UPVALUE,
-    OP_RETURN
+    OP_RETURN,
+    OP_CLASS
 } OpCode;
 
 typedef struct {
