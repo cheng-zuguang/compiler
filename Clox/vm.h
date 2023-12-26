@@ -45,6 +45,9 @@ typedef struct {
     // all intern strings(symbol).
     Table strings;
 
+    // init string
+    ObjString* initString;
+
     // the list of open upvalues.
     ObjUpvalue* openUpvalues;
 
@@ -60,7 +63,7 @@ typedef struct {
     int grayCount;
     int grayCapacity;
     Obj** grayStack;
-} VM;
+}   VM;
 
 // For exiting the process by this(static error, runtime error).
 typedef enum {
